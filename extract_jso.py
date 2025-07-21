@@ -1,11 +1,11 @@
 import json
 from playwright.sync_api import sync_playwright
+import os
 
 URL = "https://jacksonvilleso.mycusthelp.com/WEBAPP/_rs/(S(dddnslbkyvdto3ye4snf1law))/OpenRecordsSummary.aspx?sSessionID="
 
 # Maximum number of pages to scrape (set to None to scrape all)
-MAX_PAGES = 3
-
+MAX_PAGES = 0
 
 def scrape_page(page):
     records = []
@@ -38,26 +38,39 @@ def scrape_page(page):
 def main():
     data = []
     with sync_playwright() as p:
+        print("Launching browser...")
         browser = p.chromium.launch()
         context = browser.new_context(ignore_https_errors=True)
         page = context.new_page()
+        print("Navigating to page...")
         page.goto(URL)
         page.wait_for_selector("#gridView_DXMainTable")
         pages_scraped = 0
         while True:
-            data.extend(scrape_page(page))
+            print(f"Scraping page {pages_scraped + 1}")
+            page_data = scrape_page(page)
+            print(f"Found {len(page_data)} records on page {pages_scraped + 1}")
+            data.extend(page_data)
             pages_scraped += 1
             if MAX_PAGES and pages_scraped >= MAX_PAGES:
+                print("Max pages reached, stopping scrape.")
                 break
             next_btn = page.locator("#gridView_DXPagerBottom_PBN")
             classes = next_btn.get_attribute("class") or ""
             if "dxp-disabledButton" in classes:
+                print("No more pages, finished scraping.")
                 break
             next_btn.click()
             page.wait_for_timeout(1000)
         browser.close()
-    with open("jso_records_requests.json", "w") as f:
+    print(f"Total records scraped: {len(data)}")
+    out_file = "jso_records_requests.json"
+    with open(out_file, "w") as f:
         json.dump(data, f, indent=2)
+    # Print the absolute path for certainty
+    import os
+    abs_path = os.path.abspath(out_file)
+    print(f"JSON file written: {abs_path}")
 
 
 if __name__ == "__main__":
