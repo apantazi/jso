@@ -5,7 +5,7 @@ import os
 URL = "https://jacksonvilleso.mycusthelp.com/WEBAPP/_rs/(S(dddnslbkyvdto3ye4snf1law))/OpenRecordsSummary.aspx?sSessionID="
 
 # Maximum number of pages to scrape (set to None to scrape all)
-MAX_PAGES = 0
+MAX_PAGES = 1345
 
 def scrape_page(page):
     records = []
@@ -59,6 +59,20 @@ def main():
             classes = next_btn.get_attribute("class") or ""
             if "dxp-disabledButton" in classes:
                 print("No more pages, finished scraping.")
+                break
+            # Track first record to detect repeated pages
+            if page_data:
+                first_ref = page_data[0]["Reference No"]
+                if hasattr(main, "last_first_ref") and first_ref == main.last_first_ref:
+                    print("Same page detected—probably at last page. Exiting.")
+                    break
+                main.last_first_ref = first_ref
+            else:
+                print("No data, stopping.")
+                break
+
+            if pages_scraped > 1500:
+                print("Hard stop at 1500 pages.")
                 break
             next_btn.click()
             page.wait_for_timeout(1000)
