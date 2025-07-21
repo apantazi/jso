@@ -5,13 +5,13 @@ import os
 URL = "https://jacksonvilleso.mycusthelp.com/WEBAPP/_rs/(S(dddnslbkyvdto3ye4snf1law))/OpenRecordsSummary.aspx?sSessionID="
 
 # Maximum number of pages to scrape (set to None to scrape all)
-MAX_PAGES = 1345
+MAX_PAGES = 10
 
 def scrape_page(page):
     records = []
-    rows = page.locator("#gridView_DXMainTable > tbody > tr")
+    rows = page.locator("#gridView_DXMainTable > tbody > tr[class*='dxgvDataRow']")
     count = rows.count()
-    for i in range(1, count):
+    for i in range(count):
         cells = rows.nth(i).locator("td")
         if cells.count() < 5:
             continue
@@ -75,6 +75,11 @@ def main():
                 print("Hard stop at 1500 pages.")
                 break
             next_btn.click()
+            # Wait for the table to update by monitoring the first row value
+            page.wait_for_function(
+                "(prev) => document.querySelector('#gridView_DXMainTable > tbody > tr.dxgvDataRow_Moderno td').innerText.trim() !== prev",
+                arg=first_ref,
+            )
             page.wait_for_timeout(1000)
         browser.close()
     print(f"Total records scraped: {len(data)}")
